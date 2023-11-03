@@ -12,12 +12,18 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+# Get Libraries
 ```{r}
 library(caret)
+```
+
+# Read Data
+```{r}
 shrooms <- read.csv("mushrooms.csv", stringsAsFactors = TRUE)
 str(shrooms)
 ```
 
+# Clean Data
 ```{r}
 #in our dataset all veil types are "p" so they were removed
 shrooms$veil.type <- NULL
@@ -28,7 +34,6 @@ shrooms$class <- ifelse(shrooms$class == "p", 1, 0)
 
 ```
 
-
 ```{r}
 # Using model.matrix to convert all the factors to dummy variables
 
@@ -36,12 +41,12 @@ shroomsmm <- as.data.frame(model.matrix(~.-1,shrooms))
 str(shroomsmm)
 ```
 
-
+# Build Logsistic
 ```{r}
 shrooms_logistic <- glm(class ~ ., data = shrooms_train, family = "binomial")
 summary(shrooms_logistic)
 ```
-
+# Predict Logistic
 ```{r}
 shrooms_logistic_pred <- predict(shrooms_logistic, shrooms_test, type = "response")
 shrooms_logistic_pred_bin <- ifelse (shrooms_logistic_pred >= 0.3, 1, 0)
