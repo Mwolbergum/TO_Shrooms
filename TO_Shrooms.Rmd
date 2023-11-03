@@ -2,7 +2,10 @@
 title: "TO_Shrooms"
 author: "Fishbowlz"
 date: "`r Sys.Date()`"
-output: html_document
+output: 
+  html_document:
+    toc: true
+    toc_float: true
 ---
 
 ```{r setup, include=FALSE}
@@ -10,6 +13,41 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r}
+library(caret)
 shrooms <- read.csv("mushrooms.csv", stringsAsFactors = TRUE)
+str(shrooms)
 ```
+
+```{r}
+#in our dataset all veil types are "p" so they were removed
+shrooms$veil.type <- NULL
+
+# class is our output variable so it was made numeric, 1 means poisonous, 0  means edible
+shrooms$class <- ifelse(shrooms$class == "p", 1, 0)
+#shrooms$stalk.root <- ifelse(shrooms$stalk.root == "?", "missing", shrooms$stalk.root)
+
+```
+
+
+```{r}
+# Using model.matrix to convert all the factors to dummy variables
+
+shroomsmm <- as.data.frame(model.matrix(~.-1,shrooms))
+str(shroomsmm)
+```
+
+
+```{r}
+shrooms_logistic <- glm(class ~ ., data = shrooms_train, family = "binomial")
+summary(shrooms_logistic)
+```
+
+```{r}
+shrooms_logistic_pred <- predict(shrooms_logistic, shrooms_test, type = "response")
+shrooms_logistic_pred_bin <- ifelse (shrooms_logistic_pred >= 0.3, 1, 0)
+
+confusionMatrix(as.factor(shrooms_logistic_pred_bin), as.factor(shrooms_test$class), positive = "1")
+```
+
+
 
