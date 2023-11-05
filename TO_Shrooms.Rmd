@@ -15,6 +15,8 @@ knitr::opts_chunk$set(echo = TRUE)
 # Get Libraries
 ```{r}
 library(caret)
+library(C50)
+library(dplyr)
 ```
 
 # Read Data
@@ -32,6 +34,8 @@ shrooms$veil.type <- NULL
 shrooms$class <- ifelse(shrooms$class == "p", 1, 0)
 #shrooms$stalk.root <- ifelse(shrooms$stalk.root == "?", "missing", shrooms$stalk.root)
 
+colnames(shrooms)[1] ="is_poisonous"
+
 ```
 
 ```{r}
@@ -41,9 +45,27 @@ shroomsmm <- as.data.frame(model.matrix(~.-1,shrooms))
 str(shroomsmm)
 ```
 
+```{r}
+# 50 - 50 split
+set.seed(12345)
+
+shrooms_prop <- 0.5
+train_shrooms <- sample(1:nrow(shroomsmm),shrooms_prop*nrow(shroomsmm))
+shrooms_train <- shroomsmm[train_shrooms, ]
+shrooms_test <- shroomsmm[-train_shrooms, ]
+
+# You need to separate the x and y from each other when using a KNN
+shrooms_train_x <- shrooms_train[, -1]
+shrooms_test_x <- shrooms_test[, -1]
+
+shrooms_train_y <- shrooms_train[, 1]
+shrooms_test_y <- shrooms_test[, 1]
+
+```
+
 # Build Logsistic
 ```{r}
-shrooms_logistic <- glm(class ~ ., data = shrooms_train, family = "binomial")
+shrooms_logistic <- glm(is_poisonous ~ ., data = shrooms_train, family = "binomial")
 summary(shrooms_logistic)
 ```
 # Predict Logistic
@@ -51,8 +73,22 @@ summary(shrooms_logistic)
 shrooms_logistic_pred <- predict(shrooms_logistic, shrooms_test, type = "response")
 shrooms_logistic_pred_bin <- ifelse (shrooms_logistic_pred >= 0.3, 1, 0)
 
-confusionMatrix(as.factor(shrooms_logistic_pred_bin), as.factor(shrooms_test$class), positive = "1")
+confusionMatrix(as.factor(shrooms_logistic_pred_bin), as.factor(shrooms_test$is_poisonous), positive = "1")
 ```
 
 
+## Decision Tree Model
 
+```{r}
+shrooms_dt <- C5.0(as.factor(is_poisonous) ~ ., data = shrooms_train)
+
+plot(shrooms_dt)
+
+summary(shrooms_dt)
+```
+
+```{r}
+shrooms_dt_pred_bin <- predict(shrooms_dt, shrooms_test)
+
+confusionMatrix(as.factor(shrooms_dt_pred_bin), as.factor(shrooms_test$is_poisonous), positive = "1")
+```
