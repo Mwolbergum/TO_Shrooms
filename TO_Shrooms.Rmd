@@ -15,8 +15,14 @@ knitr::opts_chunk$set(echo = TRUE)
 # Get Libraries
 ```{r}
 library(caret)
+library(neuralnet)
+library(class)
+library(kernlab)
 library(C50)
+library(janitor)
+library(tidyr)
 library(dplyr)
+library(randomForest)
 ```
 
 # Read Data
@@ -50,45 +56,129 @@ str(shroomsmm)
 set.seed(12345)
 
 shrooms_prop <- 0.5
-train_shrooms <- sample(1:nrow(shroomsmm),shrooms_prop*nrow(shroomsmm))
+train_shrooms_rows <- sample(1:nrow(shroomsmm),shrooms_prop*nrow(shroomsmm))
 shrooms_train <- shroomsmm[train_shrooms, ]
 shrooms_test <- shroomsmm[-train_shrooms, ]
 
-# You need to separate the x and y from each other when using a KNN
-shrooms_train_x <- shrooms_train[, -1]
-shrooms_test_x <- shrooms_test[, -1]
+# Creating a function called "normalize" to use the min/max method to normalize the data. Thsi is because a consistent scale is required for ANN and KNN models.
+normalize <- function(x) {
+  return ((x - min(x)) / (max(x) - min(x)))
+}
 
-shrooms_train_y <- shrooms_train[, 1]
-shrooms_test_y <- shrooms_test[, 1]
+shrooms_norm <- as.data.frame(lapply(shroomsmm, normalize))
+
+# Repeating the same exact process with my normalized data (which was stored in hotel_norm) for ANN and KNN.
+shrooms_norm_train <- shrooms_norm[train_shrooms_rows, ]
+shrooms_norm_test <- shrooms_norm[-train_shrooms_rows, ]
+
+# For KNN, the x and y variables need to be separated from each other. Our y-variable, "is_canceled", is the 2nd column in the dataset, so I am filtering the columns in our train and test data by the that value.
+shrooms_norm_train_x <- shrooms_norm_train[, -1]
+shrooms_norm_test_x <- shrooms_norm_test[, -1]
+shrooms_norm_train_y <- shrooms_norm_train[, 1]
+shrooms_norm_test_y <- shrooms_norm_test[, 1]
 
 ```
 
-# Build Logsistic
+# Logistic Model
 ```{r}
-shrooms_logistic <- glm(is_poisonous ~ ., data = shrooms_train, family = "binomial")
-summary(shrooms_logistic)
-```
-# Predict Logistic
-```{r}
-shrooms_logistic_pred <- predict(shrooms_logistic, shrooms_test, type = "response")
-shrooms_logistic_pred_bin <- ifelse (shrooms_logistic_pred >= 0.3, 1, 0)
+logistic_model <- glm(is_poisonous ~ ., data = shrooms_train, family = "binomial")
+logistic_pred <- predict(logistic_model, shrooms_test, type = "response")
+logistic_pred_binary <- ifelse (logistic_pred >= 0.3, 1, 0)
 
-confusionMatrix(as.factor(shrooms_logistic_pred_bin), as.factor(shrooms_test$is_poisonous), positive = "1")
+confusionMatrix(as.factor(logistic_pred_binary), as.factor(shrooms_test$is_poisonous), positive = "1")
 ```
 
 
-## Decision Tree Model
-
-```{r}
-shrooms_dt <- C5.0(as.factor(is_poisonous) ~ ., data = shrooms_train)
-
-plot(shrooms_dt)
-
-summary(shrooms_dt)
-```
+# Decision Tree Model
 
 ```{r}
-shrooms_dt_pred_bin <- predict(shrooms_dt, shrooms_test)
+dt_model <- C5.0(as.factor(is_poisonous) ~ ., data = shrooms_train)
 
-confusionMatrix(as.factor(shrooms_dt_pred_bin), as.factor(shrooms_test$is_poisonous), positive = "1")
+plot(dt_model)
+
+dt_pred <- predict(dt_model, shrooms_test)
+
+confusionMatrix(as.factor(dt_pred_binary), as.factor(shrooms_test$is_poisonous), positive = "1")
 ```
+
+# Random Forest Model
+
+```{r}
+rf_model <- randomForest(is_poisonous ~ ., data = shrooms_train)
+rf_pred_binary <- predict(rf_model,shrooms_test)
+#confusionMatrix(as.factor(rf_pred_binary),as.factor(shrooms_test$is_poisonous),positive="1")
+```
+
+# KNN Model
+
+```{r}
+knn_pred <- knn(shrooms_norm_train_x, shrooms_norm_test_x, shrooms_norm_train_y, k =20)
+confusionMatrix(as.factor(knn_model), as.factor(shrooms_norm_test_y), positive = as.character(1))
+```
+
+
+# SVM Vanilladot Model
+
+```{r}
+
+svm_model_vanilla <- ksvm(is_poisonous ~ ., data=shrooms_train , kernel = "vanilladot")
+svm_pred_vanilla <- predict(svm_model_vanilla,shrooms_test)
+svm_pred_vanilla_binary <- ifelse(svm_pred_vanilla >= 0.5, 1, 0)
+
+# Evaluation
+confusionMatrix(as.factor(svm_pred_vanilla_binary),as.factor(shrooms_test$is_poisonous))
+```
+
+# ANN Model
+
+```{r}
+
+ann_model <- neuralnet(is_poisonous ~ ., data = shrooms_norm_train, hidden=c(2,2))
+ann_pred <- predict(ann_model, shrooms_norm_test)
+ann_pred_binary <- ifelse(ann_pred >= 0.5, 1, 0)
+
+# Evaluating
+confusionMatrix(as.factor(ann_pred_binary), as.factor(shrooms_norm_test$is_poisonous), positive = as.character(1))
+
+```
+## Creating Data Frame of Models
+
+```{r}
+# We are creating a data frame of all the vectors of test data predictions we have done for all 5 different models.
+shrooms_preds <- data.frame(log = logistic_pred, 
+                          knn = knn_pred, 
+                          decisiontree = dt_pred, 
+                          ann = ann_pred, 
+                          svm = svm_pred_vanilla, 
+                          true = shrooms_test$is_canceled)
+# Missing random forest, and it's not working but I cant figure out why :)
+```
+
+## Breaking Models into Test and Train 
+
+```{r}
+# We are now breaking down our predictions into test and train data (another layer). That way we have something to train our decision tree model of models on. I'm using the same process to split the data as I did earlier.
+set.seed(12345)
+tree_train_rows <- sample(1:nrow(shrooms_preds),.7*nrow(shrooms_preds))
+tree_test <- shrooms_preds[-tree_train_rows, ]
+tree_train <- shrooms_preds[tree_train_rows, ]
+```
+## Building the Model
+
+```{r}
+# Build decision tree model, incorporating cost matrix
+tree_model <- C5.0(as.factor(true) ~ .,data=tree_train)
+```
+
+## Predicting and Evaluating the Model
+
+```{r}
+# Predicting the test data using decision tree model using the "predict" command
+tree_predict <- predict(tree_model, tree_test)
+# Creating a confusion matrix and plot to evaluate our model of models! I'm storing the confusion matrix in the variable "tree_confusion_matrix" so I can pull out the false positive/false negative values later on.
+tree_confusion_matrix <- confusionMatrix(as.factor(tree_predict),as.factor(tree_test$true), positive="1")
+print(tree_confusion_matrix)
+plot(tree_model)
+
+```
+
