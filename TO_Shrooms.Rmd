@@ -98,22 +98,23 @@ plot(dt_model)
 
 dt_pred <- predict(dt_model, shrooms_test)
 
-confusionMatrix(as.factor(dt_pred_binary), as.factor(shrooms_test$is_poisonous), positive = "1")
+confusionMatrix(as.factor(dt_pred), as.factor(shrooms_test$is_poisonous), positive = "1")
 ```
 
 # Random Forest Model
 
 ```{r}
 rf_model <- randomForest(is_poisonous ~ ., data = shrooms_train)
-rf_pred_binary <- predict(rf_model,shrooms_test)
-#confusionMatrix(as.factor(rf_pred_binary),as.factor(shrooms_test$is_poisonous),positive="1")
+rf_pred <- predict(rf_model,shrooms_test)
+rf_pred_binary <- ifelse(rf_pred >= 0.3, 1, 0)
+confusionMatrix(as.factor(rf_pred_binary),as.factor(shrooms_test$is_poisonous),positive="1")
 ```
 
 # KNN Model
 
 ```{r}
 knn_pred <- knn(shrooms_norm_train_x, shrooms_norm_test_x, shrooms_norm_train_y, k =20)
-confusionMatrix(as.factor(knn_model), as.factor(shrooms_norm_test_y), positive = as.character(1))
+confusionMatrix(as.factor(knn_pred), as.factor(shrooms_norm_test_y), positive = as.character(1))
 ```
 
 
@@ -123,7 +124,7 @@ confusionMatrix(as.factor(knn_model), as.factor(shrooms_norm_test_y), positive =
 
 svm_model_vanilla <- ksvm(is_poisonous ~ ., data=shrooms_train , kernel = "vanilladot")
 svm_pred_vanilla <- predict(svm_model_vanilla,shrooms_test)
-svm_pred_vanilla_binary <- ifelse(svm_pred_vanilla >= 0.5, 1, 0)
+svm_pred_vanilla_binary <- ifelse(svm_pred_vanilla >= 0.3, 1, 0)
 
 # Evaluation
 confusionMatrix(as.factor(svm_pred_vanilla_binary),as.factor(shrooms_test$is_poisonous))
@@ -135,7 +136,7 @@ confusionMatrix(as.factor(svm_pred_vanilla_binary),as.factor(shrooms_test$is_poi
 
 ann_model <- neuralnet(is_poisonous ~ ., data = shrooms_norm_train, hidden=c(2,2))
 ann_pred <- predict(ann_model, shrooms_norm_test)
-ann_pred_binary <- ifelse(ann_pred >= 0.5, 1, 0)
+ann_pred_binary <- ifelse(ann_pred >= 0.3, 1, 0)
 
 # Evaluating
 confusionMatrix(as.factor(ann_pred_binary), as.factor(shrooms_norm_test$is_poisonous), positive = as.character(1))
@@ -144,14 +145,23 @@ confusionMatrix(as.factor(ann_pred_binary), as.factor(shrooms_norm_test$is_poiso
 ## Creating Data Frame of Models
 
 ```{r}
+# because ann and svm predictions output as matrices, we need to convert them into a vector, which we do below
+ann_pred_list <- split(ann_pred, row(ann_pred))
+ann_pred_vector <- unlist(ann_pred_list)
+svm_pred_list <- split(svm_pred_vanilla, row(svm_pred_vanilla))
+svm_pred_vector <- unlist(svm_pred_list)
+
 # We are creating a data frame of all the vectors of test data predictions we have done for all 5 different models.
 shrooms_preds <- data.frame(log = logistic_pred, 
-                          knn = knn_pred, 
-                          decisiontree = dt_pred, 
-                          ann = ann_pred, 
-                          svm = svm_pred_vanilla, 
-                          true = shrooms_test$is_canceled)
-# Missing random forest, and it's not working but I cant figure out why :)
+                          knn = as.numeric(as.character(knn_pred)), 
+                          decisiontree = as.numeric(as.character(dt_pred)), 
+                          ann = ann_pred_vector, 
+                          svm = svm_pred_vector, 
+                          true = shrooms_test$is_poisonous)
+
+# Missing random forest, and it's not working but I cant figure out why :) UPDATE: fixed now with some bandaids
+
+
 ```
 
 ## Breaking Models into Test and Train 
