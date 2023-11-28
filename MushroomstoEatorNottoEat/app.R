@@ -30,6 +30,7 @@ library(here)
 
 # Load the decision tree model
 tree_model <- readRDS(here("tree_model.RDS"))
+log_model <- readRDS("log_model.rds")
 
 # Define UI
 ui <- fluidPage(
@@ -62,7 +63,7 @@ ui <- fluidPage(
       selectInput("veil_type", "Veil Type:", choices = c("Partial" = "p", "Universal" = "u")),
       selectInput("veil_color", "Veil Color:", choices = c("Brown" = "n", "Orange" = "o", "White" = "w", "Yellow" = "y")),
       selectInput("ring_number", "Ring Number:", choices = c("None" = "n", "One" = "o", "Two" = "t")),
-      selectInput("ring_type", "Ring Type:", choices = c("Cobwebby" = "c", "Evanescent" = "e", "Flaring" = "f", "Large" = "l", "None" = "n", "Pendant" = "p", "Sheathing" = "s", "Zone" = "z")),
+      selectInput("ring_type", "Ring Type:", choices = c("Evanescent" = "e", "Flaring" = "f", "Large" = "l", "None" = "n", "Pendant" = "p", "Sheathing" = "s", "Zone" = "z")),
       selectInput("spore_print_color", "Spore Print Color:", choices = c("Black" = "k", "Brown" = "n", "Buff" = "b", "Chocolate" = "h", "Green" = "r", "Orange" = "o", "Purple" = "u", "White" = "w", "Yellow" = "y")),
       selectInput("population", "Population:", choices = c("Abundant" = "a", "Clustered" = "c", "Numerous" = "n", "Scattered" = "s", "Several" = "v", "Solitary" = "y")),
       selectInput("habitat", "Habitat:", choices = c("Grasses" = "g", "Leaves" = "l", "Meadows" = "m", "Paths" = "p", "Urban" = "u", "Waste" = "w", "Woods" = "d")),
@@ -80,33 +81,34 @@ server <- function(input, output) {
   observeEvent(input$submit_btn, {
     # Collect user inputs
     user_inputs <- data.frame(
-      cap_shape = shrooms$cap.shape,
-      cap_surface = shrooms$cap.surface,
-      cap_color = shrooms$cap.color,
-      bruises = shrooms$bruises,
-      odor = shrooms$odor,
-      gill_attachment = shrooms$gill.attachment,
-      gill_spacing = shrooms$gill.spacing,
-      gill_size = shrooms$gill.size,
-      gill_color = shrooms$gill.color,
-      stalk_shape = shrooms$stalk.shape,
-      stalk_root = shrooms$stalk.root,
-      stalk_surface_above_ring = shrooms$stalk.surface.above.ring,
-      stalk_surface_below_ring = shrooms$stalk.surface.below.ring,
-      stalk_color_above_ring = shrooms$stalk.color.above.ring,
-      stalk_color_below_ring = shrooms$stalk.color.below.ring,
-      veil_color = shrooms$veil.color,
-      ring_number = shrooms$ring.number,
-      ring_type = shrooms$ring.type,
-      spore_print_color = shrooms$spore.print.color,
-      population. = shrooms$population,
-      habitat = shrooms$habitat,
+      cap.shape = input$cap_shape,
+      cap.surface = input$cap_surface,
+      cap.color = input$cap_color,
+      bruises = input$bruises,
+      odor = input$odor,
+      gill.attachment = input$gill_attachment,
+      gill.spacing = input$gill_spacing,
+      gill.size = input$gill_size,
+      gill.color = input$gill_color,
+      stalk.shape = input$stalk_shape,
+      stalk.root = input$stalk_root,
+      stalk.surface.above.ring = input$stalk_surface_above_ring,
+      stalk.surface.below.ring = input$stalk_surface_below_ring,
+      stalk.color.above.ring = input$stalk_color_above_ring,
+      stalk.color.below.ring = input$stalk_color_below_ring,
+      veil.type = input$veil_type,
+      veil.color = input$veil_color,
+      ring.number = input$ring_number,
+      ring.type = input$ring_type,
+      spore.print.color = input$spore_print_color,
+      population = input$population,
+      habitat = input$habitat
       
       # ... Add more columns for other variables
     )
     
     # Make predictions using the loaded model
-    prediction <- predict(tree_model, newdata = user_inputs)
+    prediction <- predict(log_model, newdata = user_inputs, type = "response")
     
     # Display the prediction result
     output$prediction_result <- renderText({
