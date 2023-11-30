@@ -28,8 +28,18 @@ library(shiny)
 if (!require(here)) install.packages("here")
 library(here)
 
+shrooms <- read.csv("mushrooms.csv", stringsAsFactors = TRUE)
+
+#in our dataset all veil types are "p" so they were removed
+shrooms$veil.type <- NULL
+# class is our output variable so it was made numeric, 1 means poisonous, 0  means edible
+shrooms$class <- ifelse(shrooms$class == "p", 1, 0)
+colnames(shrooms)[1] ="is_poisonous"
+
+
 # Load the decision tree model
 tree_model <- readRDS(here("tree_model.RDS"))
+# load in the logistic model
 log_model <- readRDS("log_model.rds")
 
 # Define UI
@@ -63,7 +73,7 @@ ui <- fluidPage(
       selectInput("veil_type", "Veil Type:", choices = c("Partial" = "p", "Universal" = "u")),
       selectInput("veil_color", "Veil Color:", choices = c("Brown" = "n", "Orange" = "o", "White" = "w", "Yellow" = "y")),
       selectInput("ring_number", "Ring Number:", choices = c("None" = "n", "One" = "o", "Two" = "t")),
-      selectInput("ring_type", "Ring Type:", choices = c("Evanescent" = "e", "Flaring" = "f", "Large" = "l", "None" = "n", "Pendant" = "p", "Sheathing" = "s", "Zone" = "z")),
+      selectInput("ring_type", "Ring Type:", choices = c("Cobwebby" = "c", "Evanescent" = "e", "Flaring" = "f", "Large" = "l", "None" = "n", "Pendant" = "p", "Sheathing" = "s", "Zone" = "z")),
       selectInput("spore_print_color", "Spore Print Color:", choices = c("Black" = "k", "Brown" = "n", "Buff" = "b", "Chocolate" = "h", "Green" = "r", "Orange" = "o", "Purple" = "u", "White" = "w", "Yellow" = "y")),
       selectInput("population", "Population:", choices = c("Abundant" = "a", "Clustered" = "c", "Numerous" = "n", "Scattered" = "s", "Several" = "v", "Solitary" = "y")),
       selectInput("habitat", "Habitat:", choices = c("Grasses" = "g", "Leaves" = "l", "Meadows" = "m", "Paths" = "p", "Urban" = "u", "Waste" = "w", "Woods" = "d")),
@@ -81,25 +91,37 @@ server <- function(input, output) {
   observeEvent(input$submit_btn, {
     # Collect user inputs
     user_inputs <- data.frame(
+      # changed the naming scheme of the inputs to work
+      # for each input it will see if it exists in the levels of the model, if it does then it outputs it, otherwise it replaces with the most common class
       cap.shape = input$cap_shape,
       cap.surface = input$cap_surface,
       cap.color = input$cap_color,
       bruises = input$bruises,
       odor = input$odor,
-      gill.attachment = input$gill_attachment,
-      gill.spacing = input$gill_spacing,
+      gill.attachment = ifelse(input$gill_attachment %in% levels(log_model$terms$gill.attachment), 
+                               input$gill_attachment, 
+                               names(which.max(table(shrooms$gill.attachment)))),
+      gill.spacing = ifelse(input$gill_spacing %in% levels(log_model$terms$gill.spacing), 
+                            input$gill_spacing, 
+                            names(which.max(table(shrooms$gill.spacing)))),
       gill.size = input$gill_size,
       gill.color = input$gill_color,
       stalk.shape = input$stalk_shape,
-      stalk.root = input$stalk_root,
+      stalk.root = ifelse(input$stalk_root %in% levels(log_model$terms$stalk.root), 
+                          input$stalk_root, 
+                          names(which.max(table(shrooms$stalk.root)))),
       stalk.surface.above.ring = input$stalk_surface_above_ring,
       stalk.surface.below.ring = input$stalk_surface_below_ring,
       stalk.color.above.ring = input$stalk_color_above_ring,
       stalk.color.below.ring = input$stalk_color_below_ring,
       veil.type = input$veil_type,
       veil.color = input$veil_color,
-      ring.number = input$ring_number,
-      ring.type = input$ring_type,
+      ring.number = ifelse(input$ring_number %in% levels(log_model$terms$ring.number), 
+                           input$ring_number, 
+                           names(which.max(table(shrooms$ring.number)))), #no need
+      ring.type = ifelse(input$ring_type %in% levels(log_model$terms$ring.type), 
+                         input$ring_type, 
+                         names(which.max(table(shrooms$ring.type)))),
       spore.print.color = input$spore_print_color,
       population = input$population,
       habitat = input$habitat
@@ -112,7 +134,7 @@ server <- function(input, output) {
     
     # Display the prediction result
     output$prediction_result <- renderText({
-      paste("Prediction: ", prediction)
+      paste("Prediction: ", sprintf(prediction, fmt = '%#.9f'))
     })
   })
 }
