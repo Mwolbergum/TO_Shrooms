@@ -66,7 +66,7 @@ ui <- fluidPage(
     )
   ),
   
-  titlePanel(HTML("<h1 style='color: white;'>Mushroom Predictor</h1>")),
+  titlePanel(HTML("<h1 style='color: white;'>Mushroom Marketplace ShroomCheck </h1>")),
   
   sidebarLayout(
     sidebarPanel(
