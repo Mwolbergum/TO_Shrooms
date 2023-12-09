@@ -12,7 +12,14 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-# Get Libraries
+# Introduction
+#### Our business: Mushroom Marketplace is an innovative cooperative platform that specializes in the commerce of mushrooms, offering a unique marketplace for foragers to connect with a global network of buyers. This platform facilitates a seamless exchange between those who harvest nature’s bounty and those who seek the earthy delights of mushrooms, delivered directly from the wilderness to your home.
+
+#### The issue: The escalating trend of mushroom consumption, averaging 3.65 lbs per capita in 2022, is shadowed by the alarming 7,500 poison reports linked to toxic mushrooms, underscoring the critical need for caution and education, particularly in Michigan where the majority of these distressing incidents have been reported.
+
+#### Business concerns: Addressing the challenges faced by Mushroom Marketplace, it is imperative to provide vetted information on the edibility of mushrooms, as accurate safety ratings not only reduce liability but also foster trust and encourage repeat patronage from conscientious consumers.
+
+## Get Libraries
 ```{r}
 library(caret)
 library(neuralnet)
@@ -25,13 +32,14 @@ library(dplyr)
 library(randomForest)
 ```
 
-# Read Data
+## Read Data
 ```{r}
+# Reading the mushroom data from a CSV file and displaying its structure
 shrooms <- read.csv("mushrooms.csv", stringsAsFactors = TRUE)
 str(shrooms)
 ```
 
-# Clean Data
+## Clean Data
 ```{r}
 #in our dataset all veil types are "p" so they were removed
 shrooms$veil.type <- NULL
@@ -50,7 +58,6 @@ library(zoo)  # for na.aggregate
 
 ```{r}
 # Using model.matrix to convert all the factors to dummy variables
-
 shroomsmm <- as.data.frame(model.matrix(~.-1,shrooms))
 str(shroomsmm)
 ```
@@ -60,6 +67,8 @@ str(shroomsmm)
 set.seed(12345)
 
 shrooms_prop <- 0.5
+
+# Splitting the data into training and testing sets
 train_shrooms_rows <- sample(1:nrow(shroomsmm),shrooms_prop*nrow(shroomsmm))
 shrooms_train <- shroomsmm[train_shrooms_rows, ]
 shrooms_test <- shroomsmm[-train_shrooms_rows, ]
@@ -88,7 +97,8 @@ shrooms_test_no_mm <- shrooms[-train_shrooms_rows, ]
 
 ```
 
-# Logistic Model
+## Logistic Model
+#### The confusion matrix for the logistic model reveals that the model achieved perfect accuracy on the test data, correctly classifying all instances as either edible (class 0) or poisonous (class 1). The high sensitivity, specificity, and positive predictive value suggest that the model effectively identified both positive and negative cases, indicating strong performance in distinguishing between edible and poisonous mushrooms in the dataset.
 ```{r}
 logistic_model <- glm(is_poisonous ~ ., data = shrooms_train, family = "binomial")
 logistic_pred <- predict(logistic_model, shrooms_test, type = "response")
@@ -98,8 +108,8 @@ confusionMatrix(as.factor(logistic_pred_binary), as.factor(shrooms_test$is_poiso
 ```
 
 
-# Decision Tree Model
-
+## Decision Tree Model
+##### The confusion matrix for the decision tree model indicates high accuracy, with all instances being correctly identified as either edible (class 0) or poisonous (class 1). The model shows strong sensitivity, specificity, and positive predictive value, reflecting its capability to distinguish between the two classes in the dataset effectively. The performance metrics, along with a Kappa value of 1, imply that the decision tree model has achieved a high level of agreement with the true class labels on the dataset provided.
 ```{r}
 dt_model <- C5.0(as.factor(is_poisonous) ~ ., data = shrooms_train)
 
@@ -110,8 +120,8 @@ dt_pred <- predict(dt_model, shrooms_test)
 confusionMatrix(as.factor(dt_pred), as.factor(shrooms_test$is_poisonous), positive = "1")
 ```
 
-# Random Forest Model
-
+## Random Forest Model
+#### The confusion matrix for the random forest model indicates perfect performance, with all instances accurately classified as either edible (class 0) or poisonous (class 1). The model exhibits perfect accuracy, sensitivity, specificity, and positive predictive value, reflecting its exceptional ability to distinguish between mushroom classes in the dataset. The Kappa value of 1 further underscores the optimal agreement between predicted and actual class labels.
 ```{r}
 rf_model <- randomForest(is_poisonous ~ ., data = shrooms_train)
 rf_pred <- predict(rf_model,shrooms_test)
@@ -119,16 +129,16 @@ rf_pred_binary <- ifelse(rf_pred >= 0.3, 1, 0)
 confusionMatrix(as.factor(rf_pred_binary),as.factor(shrooms_test$is_poisonous),positive="1")
 ```
 
-# KNN Model
-
+## KNN Model
+#### The KNN model's results were interesting because they were not perfectly classified as with the other models. It is possible that the reasoning for this is that KNN is sensitive to noisy data and outliers. If there are instances in the dataset that are far from their neighbors, it can lead to misclassifications.The confusion matrix for the KNN model indicates high performance, with only a small number of instances misclassified. The model achieved an accuracy of 99.88%, demonstrating excellent sensitivity, specificity, and positive predictive value. The Kappa value of 0.9975 suggests strong agreement between predicted and actual class labels, highlighting the KNN model's effectiveness in distinguishing between edible and poisonous mushrooms in the dataset.
 ```{r}
 knn_pred <- knn(shrooms_norm_train_x, shrooms_norm_test_x, shrooms_norm_train_y, k =20)
 confusionMatrix(as.factor(knn_pred), as.factor(shrooms_norm_test_y), positive = as.character(1))
 ```
 
 
-# SVM Vanilladot Model
-
+## SVM Vanilladot Model
+#### The confusion matrix for the SVM VanillaDot model indicates perfect classification. The model achieved an accuracy of 1, which means it correctly predicted all the instances of both classes (0 and 1) without any errors. The sensitivity and specificity are both 1.0000, signifying that the model has a perfect true positive rate and a perfect true negative rate, respectively.
 ```{r}
 
 svm_model_vanilla <- ksvm(is_poisonous ~ ., data=shrooms_train , kernel = "vanilladot")
@@ -139,8 +149,8 @@ svm_pred_vanilla_binary <- ifelse(svm_pred_vanilla >= 0.3, 1, 0)
 confusionMatrix(as.factor(svm_pred_vanilla_binary),as.factor(shrooms_test$is_poisonous))
 ```
 
-# ANN Model
-
+## ANN Model
+#### The confusion matrix for the ANN model shows that it has also achieved flawless performance, similarly to all the other models except for the KNN model. The model has an accuracy of 1, indicating that it has correctly classified all predictions for both classes (0 and 1). The sensitivity and specificity values are both at the maximum of 1.0000, meaning the model has perfectly identified all true positives and true negatives without any false positives or false negatives.
 ```{r}
 
 ann_model <- neuralnet(is_poisonous ~ ., data = shrooms_norm_train, hidden=c(2,2))
@@ -152,9 +162,8 @@ confusionMatrix(as.factor(ann_pred_binary), as.factor(shrooms_norm_test$is_poiso
 
 ```
 
-# Creating Stacked Model
-## Creating Data Frame of Models
-
+## Creating Stacked Model
+### Creating Data Frame of Models
 ```{r}
 # because ann and svm predictions output as matrices, we need to convert them into a vector, which we do below
 ann_pred_list <- split(ann_pred, row(ann_pred))
@@ -169,13 +178,9 @@ shrooms_preds <- data.frame(log = logistic_pred,
                           ann = ann_pred_vector, 
                           svm = svm_pred_vector, 
                           true = shrooms_test$is_poisonous)
-
-# Missing random forest, and it's not working but I cant figure out why :) UPDATE: fixed now with some bandaids
-
-
 ```
 
-## Breaking Models into Test and Train 
+### Breaking Models into Test and Train 
 
 ```{r}
 # We are now breaking down our predictions into test and train data (another layer). That way we have something to train our decision tree model of models on. I'm using the same process to split the data as I did earlier.
@@ -185,15 +190,15 @@ tree_test <- shrooms_preds[-tree_train_rows, ]
 tree_train <- shrooms_preds[tree_train_rows, ]
 ```
 
-## Building the Stacked Model
-
+### Building the Stacked Model
+#### The stacked model combines the predictions of multiple individual models to make a final prediction. In the provided code, predictions from various models (logistic regression, KNN, decision tree, SVM Vanilladot, and ANN) are combined into a new dataset, and a decision tree model is trained on this model The decision tree in the stacked model learns to weigh and combine the predictions of the base models, aiming to improve overall predictive performance. This approach helps by balancing out any weaknesses in individual models and can lead to a more robust and accurate final prediction.
 ```{r}
 # Build decision tree model, incorporating cost matrix
 tree_model <- C5.0(as.factor(true) ~ .,data=tree_train)
 ```
 
-## Predicting and Evaluating the Model
-
+### Predicting and Evaluating the Model
+#### The output of this shows us that only the log_model actually affects the dataset, so we should just use this given model (log_model) in our RShiny application.
 ```{r}
 # Predicting the test data using decision tree model using the "predict" command
 tree_predict <- predict(tree_model, tree_test)
@@ -205,10 +210,9 @@ plot(tree_model)
 ```{r}
 str(tree_model)
 ```
-This shows us that only the log_model actually affects anything so we should just use the log_model in our app.
 
-# Building the App's Model
-
+## Building the App's Model
+#### Since we are using the Logistical model, the outputs are identical from what is exhibited above. 
 ```{r}
 #Because the apps inputs do not use a model matrixed set of inputs, we re-made the logistic model without the mm function in the train data
 
@@ -222,3 +226,5 @@ confusionMatrix(as.factor(log_out_pred_binary), as.factor(shrooms_test_no_mm$is_
 saveRDS(log_model_out, "log_model.rds")
 ```
 
+# Conclusion
+#### Our solution: Our solution at Mushroom Marketplace is a testament to our commitment to safety and innovation. By meticulously crafting six distinct models from our training dataset and integrating them into a comprehensive stacked model, we have identified the optimal approach — a logistic regression model that boasts impeccable accuracy (100%) and Kappa (1) statistics. Our dedicated team has developed an rShiny application that empowers users to input data, which is then processed by our carefully selected algorithm. Seamlessly integrated with our website, this application is a cornerstone of our platform, ensuring that every mushroom sold is verified for safety, thereby safeguarding our community and solidifying customer trust.
