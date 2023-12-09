@@ -46,14 +46,6 @@ colnames(shrooms)[1] ="is_poisonous"
 library(caret)
 library(zoo)  # for na.aggregate
 
-
-
-# Replace missing values with column means
-
-
-
-
-
 ```
 
 ```{r}
@@ -84,18 +76,15 @@ shrooms_norm <- as.data.frame(lapply(shroomsmm, normalize))
 # Repeating the same exact process with my normalized data (which was stored in hotel_norm) for ANN and KNN.
 shrooms_norm_train <- shrooms_norm[train_shrooms_rows, ]
 shrooms_norm_test <- shrooms_norm[-train_shrooms_rows, ]
-shrooms_norm_train <- na.aggregate(shrooms_train, FUN = mean)
-shrooms_norm_test <- na.aggregate(shrooms_test, FUN = mean)
 
 # For KNN, the x and y variables need to be separated from each other. Our y-variable, "is_poisonous", is the 2nd column in the dataset, so I am filtering the columns in our train and test data by the that value.
 shrooms_norm_train_x <- shrooms_norm_train[, -1]
 shrooms_norm_test_x <- shrooms_norm_test[, -1]
-shrooms_norm_train_x <- na.aggregate(shrooms_train, FUN = mean)
-shrooms_norm_test_x <- na.aggregate(shrooms_test, FUN = mean)
 shrooms_norm_train_y <- shrooms_norm_train[, 1]
 shrooms_norm_test_y <- shrooms_norm_test[, 1]
-shrooms_norm_train_y <- na.aggregate(shrooms_train, FUN = mean)
-shrooms_norm_test_y <- na.aggregate(shrooms_test, FUN = mean)
+
+shrooms_train_no_mm <- shrooms[train_shrooms_rows, ]
+shrooms_test_no_mm <- shrooms[-train_shrooms_rows, ]
 
 ```
 
@@ -162,6 +151,8 @@ ann_pred_binary <- ifelse(ann_pred >= 0.3, 1, 0)
 confusionMatrix(as.factor(ann_pred_binary), as.factor(shrooms_norm_test$is_poisonous), positive = as.character(1))
 
 ```
+
+# Creating Stacked Model
 ## Creating Data Frame of Models
 
 ```{r}
@@ -193,7 +184,8 @@ tree_train_rows <- sample(1:nrow(shrooms_preds),.7*nrow(shrooms_preds))
 tree_test <- shrooms_preds[-tree_train_rows, ]
 tree_train <- shrooms_preds[tree_train_rows, ]
 ```
-## Building the Model
+
+## Building the Stacked Model
 
 ```{r}
 # Build decision tree model, incorporating cost matrix
@@ -209,9 +201,24 @@ tree_predict <- predict(tree_model, tree_test)
 tree_confusion_matrix <- confusionMatrix(as.factor(tree_predict),as.factor(tree_test$true), positive="1")
 print(tree_confusion_matrix)
 plot(tree_model)
-saveRDS(tree_model, file = "tree_model.RDS")
 ```
 ```{r}
 str(tree_model)
+```
+This shows us that only the log_model actually affects anything so we should just use the log_model in our app.
+
+# Building the App's Model
+
+```{r}
+#Because the apps inputs do not use a model matrixed set of inputs, we re-made the logistic model without the mm function in the train data
+
+log_model_out <- glm(is_poisonous ~ ., data = shrooms_train_no_mm, family = "binomial")
+
+log_out_pred <- predict(log_model_out, shrooms_test_no_mm, type = "response")
+log_out_pred_binary <- ifelse (log_out_pred >= 0.3, 1, 0)
+
+confusionMatrix(as.factor(log_out_pred_binary), as.factor(shrooms_test_no_mm$is_poisonous), positive = "1")
+
+saveRDS(log_model_out, "log_model.rds")
 ```
 

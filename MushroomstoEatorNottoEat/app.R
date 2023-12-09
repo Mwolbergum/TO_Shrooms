@@ -37,9 +37,6 @@ shrooms$veil.type <- NULL
 shrooms$class <- ifelse(shrooms$class == "p", 1, 0)
 colnames(shrooms)[1] ="is_poisonous"
 
-
-# Load the decision tree model
-tree_model <- readRDS(here("tree_model.RDS"))
 # load in the logistic model
 log_model <- readRDS(here("log_model.rds"))
 
