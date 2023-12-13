@@ -13,13 +13,18 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 # Introduction
-#### Our business: Mushroom Marketplace is an innovative cooperative platform that specializes in the commerce of mushrooms, offering a unique marketplace for foragers to connect with a global network of buyers. This platform facilitates a seamless exchange between those who harvest nature’s bounty and those who seek the earthy delights of mushrooms, delivered directly from the wilderness to your home.
+#### Our business: Mushroom Marketplace is an innovative cooperative platform that specializes in the sale of mushrooms, offering a unique marketplace for foragers to connect with a global network of buyers. This platform facilitates a seamless exchange between those who harvest nature’s bounty and those who seek the earthy delights of mushrooms delivered directly from the wilderness to your home.
 
-#### The issue: The escalating trend of mushroom consumption, averaging 3.65 lbs per capita in 2022, is shadowed by the alarming 7,500 poison reports linked to toxic mushrooms, underscoring the critical need for caution and education, particularly in Michigan where the majority of these distressing incidents have been reported.
+#### The issue: The increasing trend of mushroom consumption, averaging 3.65 lbs per capita in 2022, is accompanied by the alarming 7,500 poison reports linked to toxic mushrooms, underscoring the critical need for caution and education. This issue is especially prevalent in Michigan, where the majority of these distressing incidents have been reported.
 
-#### Business concerns: Addressing the challenges faced by Mushroom Marketplace, it is imperative to provide vetted information on the edibility of mushrooms, as accurate safety ratings not only reduce liability but also foster trust and encourage repeat patronage from conscientious consumers.
+#### Business concerns: To ensure Mushroom Marketplace's success, addressing its challenges is imperative. Providing vetted information on the edibility of mushrooms is crucial, as accurate safety ratings not only reduce liability but also foster trust and encourage repeat patronage from conscientious consumers. This step is key to mitigating concerns and minimizing the chance of adverse reactions, making accurate safety information an integral component in building trust and securing continued support from conscientious consumers.
 
-## Get Libraries
+
+
+
+
+
+## Get relevant libraries
 ```{r}
 library(caret)
 library(neuralnet)
@@ -44,7 +49,7 @@ str(shrooms)
 #in our dataset all veil types are "p" so they were removed
 shrooms$veil.type <- NULL
 
-# class is our output variable so it was made numeric, 1 means poisonous, 0  means edible
+# class is our output variable, so it was made numeric. 1 means poisonous, 0  means edible
 shrooms$class <- ifelse(shrooms$class == "p", 1, 0)
 #shrooms$stalk.root <- ifelse(shrooms$stalk.root == "?", "missing", shrooms$stalk.root)
 
@@ -75,18 +80,18 @@ shrooms_test <- shroomsmm[-train_shrooms_rows, ]
 shrooms_train <- na.aggregate(shrooms_train, FUN = mean)
 shrooms_test <- na.aggregate(shrooms_test, FUN = mean)
 
-# Creating a function called "normalize" to use the min/max method to normalize the data. Thsi is because a consistent scale is required for ANN and KNN models.
+# Creating a function called "normalize" to use the min/max method to normalize the data. This is because a consistent scale is required for ANN and KNN models.
 normalize <- function(x) {
   return ((x - min(x)) / (max(x) - min(x)))
 }
 
 shrooms_norm <- as.data.frame(lapply(shroomsmm, normalize))
 
-# Repeating the same exact process with my normalized data (which was stored in hotel_norm) for ANN and KNN.
+# Repeating the same exact process with normalized data (which was stored in shrooms_norm) for ANN and KNN.
 shrooms_norm_train <- shrooms_norm[train_shrooms_rows, ]
 shrooms_norm_test <- shrooms_norm[-train_shrooms_rows, ]
 
-# For KNN, the x and y variables need to be separated from each other. Our y-variable, "is_poisonous", is the 2nd column in the dataset, so I am filtering the columns in our train and test data by the that value.
+# For KNN, the x and y variables need to be separated from each other. Our y-variable, "is_poisonous," is the 2nd column in the dataset, so we are filtering the columns in our train and test data by that value.
 shrooms_norm_train_x <- shrooms_norm_train[, -1]
 shrooms_norm_test_x <- shrooms_norm_test[, -1]
 shrooms_norm_train_y <- shrooms_norm_train[, 1]
@@ -120,6 +125,7 @@ dt_pred <- predict(dt_model, shrooms_test)
 confusionMatrix(as.factor(dt_pred), as.factor(shrooms_test$is_poisonous), positive = "1")
 ```
 
+
 ## Random Forest Model
 #### The confusion matrix for the random forest model indicates perfect performance, with all instances accurately classified as either edible (class 0) or poisonous (class 1). The model exhibits perfect accuracy, sensitivity, specificity, and positive predictive value, reflecting its exceptional ability to distinguish between mushroom classes in the dataset. The Kappa value of 1 further underscores the optimal agreement between predicted and actual class labels.
 ```{r}
@@ -130,7 +136,7 @@ confusionMatrix(as.factor(rf_pred_binary),as.factor(shrooms_test$is_poisonous),p
 ```
 
 ## KNN Model
-#### The KNN model's results were interesting because they were not perfectly classified as with the other models. It is possible that the reasoning for this is that KNN is sensitive to noisy data and outliers. If there are instances in the dataset that are far from their neighbors, it can lead to misclassifications.The confusion matrix for the KNN model indicates high performance, with only a small number of instances misclassified. The model achieved an accuracy of 99.88%, demonstrating excellent sensitivity, specificity, and positive predictive value. The Kappa value of 0.9975 suggests strong agreement between predicted and actual class labels, highlighting the KNN model's effectiveness in distinguishing between edible and poisonous mushrooms in the dataset.
+#### The KNN model's results were interesting because they were not perfectly classified as with the other models. The reasoning for this is that KNN is sensitive to noisy data and outliers. If there are instances in the dataset that are far from their neighbors, it can lead to misclassifications. The confusion matrix for the KNN model indicates high performance, with only a small number of instances misclassified. The model achieved an accuracy of 99.88%, demonstrating excellent sensitivity, specificity, and positive predictive value. The Kappa value of 0.9975 suggests strong agreement between predicted and actual class labels, highlighting the KNN model's effectiveness in distinguishing between edible and poisonous mushrooms in the dataset.
 ```{r}
 knn_pred <- knn(shrooms_norm_train_x, shrooms_norm_test_x, shrooms_norm_train_y, k =20)
 confusionMatrix(as.factor(knn_pred), as.factor(shrooms_norm_test_y), positive = as.character(1))
@@ -150,14 +156,14 @@ confusionMatrix(as.factor(svm_pred_vanilla_binary),as.factor(shrooms_test$is_poi
 ```
 
 ## ANN Model
-#### The confusion matrix for the ANN model shows that it has also achieved flawless performance, similarly to all the other models except for the KNN model. The model has an accuracy of 1, indicating that it has correctly classified all predictions for both classes (0 and 1). The sensitivity and specificity values are both at the maximum of 1.0000, meaning the model has perfectly identified all true positives and true negatives without any false positives or false negatives.
+#### The confusion matrix for the ANN model shows that it has also achieved flawless performance, similar to all the other models except for the KNN model. The model has an accuracy of 1, indicating that it has correctly classified all predictions for both classes (0 and 1). The sensitivity and specificity values are both at the maximum of 1.0000, meaning the model has perfectly identified all true positives and true negatives without any false positives or false negatives.
 ```{r}
 
 ann_model <- neuralnet(is_poisonous ~ ., data = shrooms_norm_train, hidden=c(2,2))
 ann_pred <- predict(ann_model, shrooms_norm_test)
 ann_pred_binary <- ifelse(ann_pred >= 0.3, 1, 0)
 
-# Evaluating
+# Evaluation
 confusionMatrix(as.factor(ann_pred_binary), as.factor(shrooms_norm_test$is_poisonous), positive = as.character(1))
 
 ```
@@ -183,7 +189,7 @@ shrooms_preds <- data.frame(log = logistic_pred,
 ### Breaking Models into Test and Train 
 
 ```{r}
-# We are now breaking down our predictions into test and train data (another layer). That way we have something to train our decision tree model of models on. I'm using the same process to split the data as I did earlier.
+# We are now breaking down our predictions into test and train data (another layer). That way, we have something to train our decision tree model of models on. We are using the same process to split the data as performed earlier.
 set.seed(12345)
 tree_train_rows <- sample(1:nrow(shrooms_preds),.7*nrow(shrooms_preds))
 tree_test <- shrooms_preds[-tree_train_rows, ]
@@ -191,11 +197,15 @@ tree_train <- shrooms_preds[tree_train_rows, ]
 ```
 
 ### Building the Stacked Model
-#### The stacked model combines the predictions of multiple individual models to make a final prediction. In the provided code, predictions from various models (logistic regression, KNN, decision tree, SVM Vanilladot, and ANN) are combined into a new dataset, and a decision tree model is trained on this model The decision tree in the stacked model learns to weigh and combine the predictions of the base models, aiming to improve overall predictive performance. This approach helps by balancing out any weaknesses in individual models and can lead to a more robust and accurate final prediction.
+#### The stacked model combines the predictions of multiple individual models to make a final prediction. In the provided code, predictions from various models (logistic regression, KNN, decision tree, SVM Vanilladot, and ANN) are combined into a new dataset, and a decision tree model is trained on this model. The decision tree in the stacked model learns to weigh and combine the predictions of the base models, aiming to improve overall predictive performance. This approach helps by balancing out any weaknesses in individual models and can lead to a more robust and accurate final prediction.
 ```{r}
 # Build decision tree model, incorporating cost matrix
 tree_model <- C5.0(as.factor(true) ~ .,data=tree_train)
 ```
+
+
+
+
 
 ### Predicting and Evaluating the Model
 #### The output of this shows us that only the log_model actually affects the dataset, so we should just use this given model (log_model) in our RShiny application.
@@ -226,5 +236,9 @@ confusionMatrix(as.factor(log_out_pred_binary), as.factor(shrooms_test_no_mm$is_
 saveRDS(log_model_out, "log_model.rds")
 ```
 
+
+
+
 # Conclusion
-#### Our solution: Our solution at Mushroom Marketplace is a testament to our commitment to safety and innovation. By meticulously crafting six distinct models from our training dataset and integrating them into a comprehensive stacked model, we have identified the optimal approach — a logistic regression model that boasts impeccable accuracy (100%) and Kappa (1) statistics. Our dedicated team has developed an rShiny application that empowers users to input data, which is then processed by our carefully selected algorithm. Seamlessly integrated with our website, this application is a cornerstone of our platform, ensuring that every mushroom sold is verified for safety, thereby safeguarding our community and solidifying customer trust.
+#### Our solution: Our solution at Mushroom Marketplace is a testament to our commitment to safety and innovation. By meticulously crafting six distinct models from our training dataset and integrating them into a comprehensive stacked model, we have identified the optimal approach: a logistic regression model that boasts impeccable accuracy (100%) and Kappa (1) statistics. Our dedicated team has developed an rShiny application that allows users to input data, which is then processed by our carefully selected algorithm. This user-facing application serves as the cornerstone of our platform, ensuring that every mushroom processed via our website is verified for safety, thereby keeping our customers safe while emboldening customer trust. 
+
